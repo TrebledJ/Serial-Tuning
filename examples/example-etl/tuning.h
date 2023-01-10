@@ -43,13 +43,13 @@
 
 #define X_ENUM(E, T) E,
 #define X_CONSTRUCTOR(E, T) \
-    TuneItem(T &data) : type{E}, data{reinterpret_cast<void *>(&data)} {}
-#define X_CAST(E, T)                                                                               \
-    case E:                                                                                        \
-        std::is_same<T, String>::value                                                             \
-            ? (*reinterpret_cast<String *>(data) = value, 0)                                       \
-            : (std::is_integral<T>::value ? (*reinterpret_cast<T *>(data) = value.toInt(), 0)      \
-                                          : (*reinterpret_cast<T *>(data) = value.toDouble(), 0)); \
+    TuneItem(T& data) : type{E}, data{reinterpret_cast<void*>(&data)} {}
+#define X_CAST(E, T)                                                                              \
+    case E:                                                                                       \
+        std::is_same<T, String>::value                                                            \
+            ? (*reinterpret_cast<String*>(data) = value, 0)                                       \
+            : (std::is_integral<T>::value ? (*reinterpret_cast<T*>(data) = value.toInt(), 0)      \
+                                          : (*reinterpret_cast<T*>(data) = value.toDouble(), 0)); \
         break;
 
 /**
@@ -66,17 +66,16 @@ public:
     TuneItem() = default;
     TYPE_MAP(X_CONSTRUCTOR)
 
-    void set(const String &value)
+    void set(const String& value)
     {
-        switch (type)
-        {
+        switch (type) {
             TYPE_MAP(X_CAST)
         }
     }
 
 private:
     Type type;
-    void *data = nullptr;
+    void* data = nullptr;
 };
 
 #ifdef SERIAL_TUNING_USE_ETL_UNORDERED_MAP
@@ -86,7 +85,7 @@ namespace etl
     class hash<String>
     {
     public:
-        size_t operator()(const String &s) const
+        size_t operator()(const String& s) const
         {
             // djb2
             size_t hash = 5381;
@@ -95,7 +94,7 @@ namespace etl
             return hash;
         }
     };
-}
+} // namespace etl
 
 namespace detail
 {
@@ -103,14 +102,14 @@ namespace detail
     class container
     {
     public:
-        void insert(const String &name, const TuneItem &item)
+        void insert(const String& name, const TuneItem& item)
         {
             if (m_items.size() == MAX_ITEMS)
                 return;
             m_items[name] = item;
         }
 
-        void set(const String &name, const String &value)
+        void set(const String& name, const String& value)
         {
             auto it = m_items.find(name);
             if (it != m_items.end())
@@ -130,7 +129,7 @@ namespace detail
     class container
     {
     public:
-        void insert(const String &name, const TuneItem &item)
+        void insert(const String& name, const TuneItem& item)
         {
             if (m_size == MAX_ITEMS)
                 return;
@@ -139,12 +138,10 @@ namespace detail
             m_size++;
         }
 
-        void set(const String &name, const String &value)
+        void set(const String& name, const String& value)
         {
-            for (size_t i = 0; i < m_size; i++)
-            {
-                if (m_names[i] == name)
-                {
+            for (size_t i = 0; i < m_size; i++) {
+                if (m_names[i] == name) {
                     m_items[i].set(value);
                     break;
                 }
@@ -160,8 +157,8 @@ namespace detail
 
 #endif
 
-namespace detail {
-    
+namespace detail
+{
 }
 
 
@@ -172,15 +169,14 @@ class TuneSet
 
 public:
     template <typename T>
-    void add(String name, T &data)
+    void add(String name, T& data)
     {
         m_container.insert(name, TuneItem(data));
     }
 
     void readSerial()
     {
-        while (Serial.available())
-        {
+        while (Serial.available()) {
             String name = Serial.readStringUntil('=');
             String value = Serial.readStringUntil('\n');
             if (name == "" || value == "")

@@ -13,7 +13,8 @@ double f;
 
 TuneSet<> tuning;
 
-void setup() {
+void setup()
+{
     tuning.add("u8", a);
     tuning.add("i16", b);
     tuning.add("u32", c);
@@ -24,7 +25,8 @@ void setup() {
     Serial.begin(115200);
 }
 
-void loop() {
+void loop()
+{
     tuning.readSerial();
 
     char buffer[256] = {0};
