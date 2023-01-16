@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <type_traits>
 
+
 #ifndef SERIAL_TUNING_DEFAULT_MAX_ITEMS
 #define SERIAL_TUNING_DEFAULT_MAX_ITEMS 32
 #endif
@@ -259,33 +260,21 @@ public:
     {
         while (Serial.available()) {
             String name = Serial.readStringUntil('=');
+            name.trim();
             String value = Serial.readStringUntil('\n');
-            if (name == "") {
-                if (value == "") {
-                    // Not a tuning command.
-                    continue;
-                }
-
-                // value != ""
-                // Treat value as a name, and print it.
-                TuneItem* item = m_container.get(value);
-                if (item)
-                    print(*item);
-#ifdef SERIAL_TUNING_WARN_NOT_FOUND
-                else {
-                    Serial.println("error: could not find variable '" + value + "'");
-                }
-#endif
-
-            } else {
+            if (!name.isEmpty()) {
                 TuneItem* item = m_container.get(name);
-                if (item)
-                    set(*item, value);
+                if (!item) {
 #ifdef SERIAL_TUNING_WARN_NOT_FOUND
-                else {
                     Serial.println("error: could not find variable '" + name + "'");
-                }
 #endif
+                } else {
+                    if (!value.isEmpty()) {
+                        set(*item, value);
+                    } else {
+                        Serial.printf("%s=%s\n", name, to_string(*item));
+                    }
+                }
             }
         }
     }
@@ -303,11 +292,11 @@ private:
         }
     }
 
-    void print(TuneItem& item)
+    String to_string(TuneItem& item)
     {
         switch (item.type) {
 #define X_CASE(T) \
-    case ENUMIFY(T): Writer::template write<T>(*reinterpret_cast<T*>(item.data)); break;
+    case ENUMIFY(T): return Writer::template write<T>(*reinterpret_cast<T*>(item.data));
 
             SERIAL_TUNING_TYPE_LIST(X_CASE)
 
