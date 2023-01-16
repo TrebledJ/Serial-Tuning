@@ -26,7 +26,6 @@
 #define SERIAL_TUNING_DEFAULT_MAX_ITEMS 32
 #endif
 
-// TODO: 64-bit ints don't (always) work with Arduino's String::toInt.
 
 // Use an x-macro to avoid repetition/typos.
 #define TYPE_MAP(X) \
@@ -46,48 +45,48 @@
 template <bool B, class T = void>
 using enable_if_t = typename std::enable_if<B, T>::type;
 
-#define ENUMIFY(T) TYPE_##T
+#define ENUMIFY(T) TUNING_TYPE_##T
 
 #define ENABLE_IF(COND) enable_if_t<COND, int> = 0
 
 
-class converter
+class DefaultParser
 {
 public:
-    template <typename T, ENABLE_IF(std::is_signed<T>::value && std::is_integral<T>::value)>
-    static T convert(const String& value)
+    template <typename T, ENABLE_IF(std::is_signed<T>::value&& std::is_integral<T>::value)>
+    static T parse(const String& value)
     {
         char* str_end;
         return strtoll(value.c_str(), &str_end, 0);
     }
 
-    template <typename T, ENABLE_IF(std::is_unsigned<T>::value && std::is_integral<T>::value)>
-    static T convert(const String& value)
+    template <typename T, ENABLE_IF(std::is_unsigned<T>::value&& std::is_integral<T>::value)>
+    static T parse(const String& value)
     {
         char* str_end;
         return strtoull(value.c_str(), &str_end, 0);
     }
 
     template <typename T, ENABLE_IF(std::is_floating_point<T>::value)>
-    static T convert(const String& value)
+    static T parse(const String& value)
     {
         char* str_end;
         return strtod(value.c_str(), &str_end);
     }
 
     template <typename T, ENABLE_IF((std::is_same<T, String>::value))>
-    static String convert(const String& value)
+    static String parse(const String& value)
     {
         return value;
     }
+};
 
-    // template <typename T, ENABLE_IF(!(std::is_arithmetic<T>::value || (std::is_same<T, String>::value)))>
-    // static T convert(const String& value)
-    // {
-    //     static_assert("Unimplemented");
-        // char* str_end;
-        // return strtoull(value.c_str(), &str_end, 10);
-    // }
+
+enum Type
+{
+#define X_ENUM(T) ENUMIFY(T),
+    TYPE_MAP(X_ENUM)
+#undef X_ENUM
 };
 
 
@@ -97,12 +96,8 @@ public:
 class TuneItem
 {
 public:
-    enum Type
-    {
-#define X_ENUM(T) ENUMIFY(T),
-        TYPE_MAP(X_ENUM)
-#undef X_ENUM
-    };
+    Type type;
+    void* data = nullptr;
 
     TuneItem() = default;
 
@@ -112,22 +107,6 @@ public:
     TYPE_MAP(X_CONSTRUCTOR)
 
 #undef X_CONSTRUCTOR
-
-    void set(const String& value)
-    {
-        switch (type) {
-#define X_CAST(T) \
-    case ENUMIFY(T): *reinterpret_cast<T*>(data) = converter::convert<T>(value); break;
-
-            TYPE_MAP(X_CAST)
-
-#undef X_CAST
-        }
-    }
-
-private:
-    Type type;
-    void* data = nullptr;
 };
 
 
@@ -162,11 +141,13 @@ namespace detail
             m_items[name] = item;
         }
 
-        void set(const String& name, const String& value)
+        TuneItem& get(const String& name)
         {
             auto it = m_items.find(name);
             if (it != m_items.end())
-                it->second.set(value);
+                return &it->second;
+
+            return nullptr;
         }
 
     private:
@@ -191,14 +172,14 @@ namespace detail
             m_size++;
         }
 
-        void set(const String& name, const String& value)
+        TuneItem* get(const String& name)
         {
             for (size_t i = 0; i < m_size; i++) {
                 if (m_names[i] == name) {
-                    m_items[i].set(value);
-                    break;
+                    return &m_items[i];
                 }
             }
+            return nullptr;
         }
 
     private:
@@ -211,7 +192,7 @@ namespace detail
 #endif
 
 
-template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS>
+template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS, typename Parser = DefaultParser>
 class TuneSet
 {
     detail::container<MAX_ITEMS> m_container;
@@ -231,12 +212,29 @@ public:
             if (name == "" || value == "")
                 continue;
 
-            m_container.set(name, value);
+            // m_container.set(name, value);
+            TuneItem* item = m_container.get(name);
+            if (item)
+                set(*item, value);
+        }
+    }
+
+private:
+    void set(TuneItem& item, const String& value)
+    {
+        switch (item.type) {
+#define X_CASE(T) \
+    case ENUMIFY(T): *reinterpret_cast<T*>(item.data) = Parser::template parse<T>(value); break;
+
+            TYPE_MAP(X_CASE)
+
+#undef X_CASE
         }
     }
 };
 
 
 #undef ENABLE_IF
+#undef ENUMIFY
 
 #endif
