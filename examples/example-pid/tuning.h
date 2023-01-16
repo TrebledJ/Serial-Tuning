@@ -210,6 +210,9 @@ namespace detail
 
 namespace detail
 {
+    /**
+     * A simple set with O(n) lookup/insert time complexity.
+     */
     template <size_t MAX_ITEMS>
     class container
     {
@@ -218,9 +221,17 @@ namespace detail
         {
             if (m_size == MAX_ITEMS)
                 return;
-            m_names[m_size] = name;
-            m_items[m_size] = item;
-            m_size++;
+
+            TuneItem* existing_item = get(name);
+            if (existing_item) {
+                // Item with the same name exists.
+                *existing_item = item;
+            } else {
+                // Item is new, insert it at the end.
+                m_names[m_size] = name;
+                m_items[m_size] = item;
+                m_size++;
+            }
         }
 
         TuneItem* get(const String& name)
