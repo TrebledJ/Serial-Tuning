@@ -95,18 +95,33 @@ public:
 class DefaultWriter
 {
 public:
-    template <typename T, ENABLE_IF(std::is_integral<T>::value)>
+    // Some versions of WString.h don't provide conversions for long long types.
+    template <typename T, ENABLE_IF((std::is_same<T, uint64_t>::value))>
     static String write(T value)
     {
-        uint8_t base = 10;
-        return String(value, base);
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%llu", value);
+        return String(buffer);
+    }
+
+    template <typename T, ENABLE_IF((std::is_same<T, int64_t>::value))>
+    static String write(T value)
+    {
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%lld", value);
+        return String(buffer);
+    }
+
+    template <typename T, ENABLE_IF(std::is_integral<T>::value && sizeof(T) != sizeof(uint64_t))>
+    static String write(T value)
+    {
+        return String(value, 10);
     }
 
     template <typename T, ENABLE_IF(std::is_floating_point<T>::value)>
     static String write(T value)
     {
-        unsigned int dp = 6;
-        return String(value, dp);
+        return String(value, 6);
     }
 
     template <typename T, ENABLE_IF((std::is_same<T, String>::value))>
