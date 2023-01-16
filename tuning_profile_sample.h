@@ -22,4 +22,21 @@
 #define SERIAL_TUNING_DEFAULT_MAX_ITEMS 32
 
 
+// ----- Tuning Types -----
+// You may define your own x-macro list of types to tune.
+// You may need to define your own parser/converter if your type is not specialised in the DefaultParser.
+
+// #define SERIAL_TUNING_TYPE_LIST(X) \
+//     X(int32_t)       \
+//     X(uint32_t)      \
+//     X(float)         \
+//     X(String)        \
+
+
+// ----- Serial Output -----
+
+// Uncomment the following line to print warnings to Serial when a variable name is not found.
+// #define SERIAL_TUNING_WARN_NOT_FOUND
+
+
 #endif
