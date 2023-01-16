@@ -19,38 +19,126 @@
 #else
 #include <array>
 #endif
+#include <cstdlib>
 #include <type_traits>
 
 #ifndef SERIAL_TUNING_DEFAULT_MAX_ITEMS
 #define SERIAL_TUNING_DEFAULT_MAX_ITEMS 32
 #endif
 
-// TODO: 64-bit ints don't (always) work with Arduino's String::toInt.
 
 // Use an x-macro to avoid repetition/typos.
-#define TYPE_MAP(X)     \
-    X(INT8, int8_t)     \
-    X(INT16, int16_t)   \
-    X(INT32, int32_t)   \
-    X(INT64, int64_t)   \
-    X(UINT8, uint8_t)   \
-    X(UINT16, uint16_t) \
-    X(UINT32, uint32_t) \
-    X(UINT64, uint64_t) \
-    X(FLOAT, float)     \
-    X(DOUBLE, double)   \
-    X(STRING, String)
+#ifndef SERIAL_TUNING_TYPE_LIST
+#define SERIAL_TUNING_TYPE_LIST(X) \
+    X(int8_t)                      \
+    X(int16_t)                     \
+    X(int32_t)                     \
+    X(int64_t)                     \
+    X(uint8_t)                     \
+    X(uint16_t)                    \
+    X(uint32_t)                    \
+    X(uint64_t)                    \
+    X(float)                       \
+    X(double)                      \
+    X(String)
+#endif
 
-#define X_ENUM(E, T) E,
-#define X_CONSTRUCTOR(E, T) \
-    TuneItem(T& data) : type{E}, data{reinterpret_cast<void*>(&data)} {}
-#define X_CAST(E, T)                                                                              \
-    case E:                                                                                       \
-        std::is_same<T, String>::value                                                            \
-            ? (*reinterpret_cast<String*>(data) = value, 0)                                       \
-            : (std::is_integral<T>::value ? (*reinterpret_cast<T*>(data) = value.toInt(), 0)      \
-                                          : (*reinterpret_cast<T*>(data) = value.toDouble(), 0)); \
-        break;
+
+template <bool B, class T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
+
+#define ENUMIFY(T) TUNING_TYPE_##T
+
+#define ENABLE_IF(COND) enable_if_t<COND, int> = 0
+
+
+/**
+ * Converts strings to various tuning types. You may inherit this class and
+ * implement your own read functions, then pass it to TuneSet.
+ */
+class DefaultReader
+{
+public:
+    template <typename T, ENABLE_IF(std::is_signed<T>::value&& std::is_integral<T>::value)>
+    static T read(const String& value)
+    {
+        char* str_end;
+        return strtoll(value.c_str(), &str_end, 0);
+    }
+
+    template <typename T, ENABLE_IF(std::is_unsigned<T>::value&& std::is_integral<T>::value)>
+    static T read(const String& value)
+    {
+        char* str_end;
+        return strtoull(value.c_str(), &str_end, 0);
+    }
+
+    template <typename T, ENABLE_IF(std::is_floating_point<T>::value)>
+    static T read(const String& value)
+    {
+        char* str_end;
+        return strtod(value.c_str(), &str_end);
+    }
+
+    template <typename T, ENABLE_IF((std::is_same<T, String>::value))>
+    static String read(const String& value)
+    {
+        return value;
+    }
+};
+
+
+/**
+ * Converts data to Strings. You may inherit this class and implement your own
+ * write functions, then pass it to TuneSet.
+ */
+class DefaultWriter
+{
+public:
+    // Some versions of WString.h don't provide conversions for long long types.
+    template <typename T, ENABLE_IF((std::is_same<T, uint64_t>::value))>
+    static String write(T value)
+    {
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%llu", value);
+        return String(buffer);
+    }
+
+    template <typename T, ENABLE_IF((std::is_same<T, int64_t>::value))>
+    static String write(T value)
+    {
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%lld", value);
+        return String(buffer);
+    }
+
+    template <typename T, ENABLE_IF(std::is_integral<T>::value && sizeof(T) != sizeof(uint64_t))>
+    static String write(T value)
+    {
+        return String(value, 10);
+    }
+
+    template <typename T, ENABLE_IF(std::is_floating_point<T>::value)>
+    static String write(T value)
+    {
+        return String(value, 6);
+    }
+
+    template <typename T, ENABLE_IF((std::is_same<T, String>::value))>
+    static String write(const T& value)
+    {
+        return value;
+    }
+};
+
+
+enum Type
+{
+#define X_ENUM(T) ENUMIFY(T),
+    SERIAL_TUNING_TYPE_LIST(X_ENUM)
+#undef X_ENUM
+};
+
 
 /**
  * Tagged union-like object containing a pointer storing a value to tune.
@@ -58,25 +146,19 @@
 class TuneItem
 {
 public:
-    enum Type
-    {
-        TYPE_MAP(X_ENUM)
-    };
-
-    TuneItem() = default;
-    TYPE_MAP(X_CONSTRUCTOR)
-
-    void set(const String& value)
-    {
-        switch (type) {
-            TYPE_MAP(X_CAST)
-        }
-    }
-
-private:
     Type type;
     void* data = nullptr;
+
+    TuneItem() = default;
+
+#define X_CONSTRUCTOR(T) \
+    TuneItem(T& data) : type{ENUMIFY(T)}, data{reinterpret_cast<void*>(&data)} {}
+
+    SERIAL_TUNING_TYPE_LIST(X_CONSTRUCTOR)
+
+#undef X_CONSTRUCTOR
 };
+
 
 #ifdef SERIAL_TUNING_USE_ETL_UNORDERED_MAP
 namespace etl
@@ -109,11 +191,13 @@ namespace detail
             m_items[name] = item;
         }
 
-        void set(const String& name, const String& value)
+        TuneItem& get(const String& name)
         {
             auto it = m_items.find(name);
             if (it != m_items.end())
-                it->second.set(value);
+                return &it->second;
+
+            return nullptr;
         }
 
     private:
@@ -138,14 +222,14 @@ namespace detail
             m_size++;
         }
 
-        void set(const String& name, const String& value)
+        TuneItem* get(const String& name)
         {
             for (size_t i = 0; i < m_size; i++) {
                 if (m_names[i] == name) {
-                    m_items[i].set(value);
-                    break;
+                    return &m_items[i];
                 }
             }
+            return nullptr;
         }
 
     private:
@@ -157,12 +241,9 @@ namespace detail
 
 #endif
 
-namespace detail
-{
-}
 
-
-template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS>
+template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS, typename Reader = DefaultReader,
+          typename Writer = DefaultWriter>
 class TuneSet
 {
     detail::container<MAX_ITEMS> m_container;
@@ -179,12 +260,64 @@ public:
         while (Serial.available()) {
             String name = Serial.readStringUntil('=');
             String value = Serial.readStringUntil('\n');
-            if (name == "" || value == "")
-                continue;
+            if (name == "") {
+                if (value == "") {
+                    // Not a tuning command.
+                    continue;
+                }
 
-            m_container.set(name, value);
+                // value != ""
+                // Treat value as a name, and print it.
+                TuneItem* item = m_container.get(value);
+                if (item)
+                    print(*item);
+#ifdef SERIAL_TUNING_WARN_NOT_FOUND
+                else {
+                    Serial.println("error: could not find variable '" + value + "'");
+                }
+#endif
+
+            } else {
+                TuneItem* item = m_container.get(name);
+                if (item)
+                    set(*item, value);
+#ifdef SERIAL_TUNING_WARN_NOT_FOUND
+                else {
+                    Serial.println("error: could not find variable '" + name + "'");
+                }
+#endif
+            }
+        }
+    }
+
+private:
+    void set(TuneItem& item, const String& value)
+    {
+        switch (item.type) {
+#define X_CASE(T) \
+    case ENUMIFY(T): *reinterpret_cast<T*>(item.data) = Reader::template read<T>(value); break;
+
+            SERIAL_TUNING_TYPE_LIST(X_CASE)
+
+#undef X_CASE
+        }
+    }
+
+    void print(TuneItem& item)
+    {
+        switch (item.type) {
+#define X_CASE(T) \
+    case ENUMIFY(T): Writer::template write<T>(*reinterpret_cast<T*>(item.data)); break;
+
+            SERIAL_TUNING_TYPE_LIST(X_CASE)
+
+#undef X_CASE
         }
     }
 };
+
+
+#undef ENABLE_IF
+#undef ENUMIFY
 
 #endif
