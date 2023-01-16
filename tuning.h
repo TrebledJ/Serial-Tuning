@@ -19,6 +19,7 @@
 #else
 #include <array>
 #endif
+#include <cstdlib>
 #include <type_traits>
 
 #ifndef SERIAL_TUNING_DEFAULT_MAX_ITEMS
@@ -28,29 +29,67 @@
 // TODO: 64-bit ints don't (always) work with Arduino's String::toInt.
 
 // Use an x-macro to avoid repetition/typos.
-#define TYPE_MAP(X)     \
-    X(INT8, int8_t)     \
-    X(INT16, int16_t)   \
-    X(INT32, int32_t)   \
-    X(INT64, int64_t)   \
-    X(UINT8, uint8_t)   \
-    X(UINT16, uint16_t) \
-    X(UINT32, uint32_t) \
-    X(UINT64, uint64_t) \
-    X(FLOAT, float)     \
-    X(DOUBLE, double)   \
-    X(STRING, String)
+#define TYPE_MAP(X) \
+    X(int8_t)       \
+    X(int16_t)      \
+    X(int32_t)      \
+    X(int64_t)      \
+    X(uint8_t)      \
+    X(uint16_t)     \
+    X(uint32_t)     \
+    X(uint64_t)     \
+    X(float)        \
+    X(double)       \
+    X(String)
 
-#define X_ENUM(E, T) E,
-#define X_CONSTRUCTOR(E, T) \
-    TuneItem(T& data) : type{E}, data{reinterpret_cast<void*>(&data)} {}
-#define X_CAST(E, T)                                                                              \
-    case E:                                                                                       \
-        std::is_same<T, String>::value                                                            \
-            ? (*reinterpret_cast<String*>(data) = value, 0)                                       \
-            : (std::is_integral<T>::value ? (*reinterpret_cast<T*>(data) = value.toInt(), 0)      \
-                                          : (*reinterpret_cast<T*>(data) = value.toDouble(), 0)); \
-        break;
+
+template <bool B, class T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
+
+#define ENUMIFY(T) TYPE_##T
+
+#define ENABLE_IF(COND) enable_if_t<COND, int> = 0
+
+
+class converter
+{
+public:
+    template <typename T, ENABLE_IF(std::is_signed<T>::value && std::is_integral<T>::value)>
+    static T convert(const String& value)
+    {
+        char* str_end;
+        return strtoll(value.c_str(), &str_end, 0);
+    }
+
+    template <typename T, ENABLE_IF(std::is_unsigned<T>::value && std::is_integral<T>::value)>
+    static T convert(const String& value)
+    {
+        char* str_end;
+        return strtoull(value.c_str(), &str_end, 0);
+    }
+
+    template <typename T, ENABLE_IF(std::is_floating_point<T>::value)>
+    static T convert(const String& value)
+    {
+        char* str_end;
+        return strtod(value.c_str(), &str_end);
+    }
+
+    template <typename T, ENABLE_IF((std::is_same<T, String>::value))>
+    static String convert(const String& value)
+    {
+        return value;
+    }
+
+    // template <typename T, ENABLE_IF(!(std::is_arithmetic<T>::value || (std::is_same<T, String>::value)))>
+    // static T convert(const String& value)
+    // {
+    //     static_assert("Unimplemented");
+        // char* str_end;
+        // return strtoull(value.c_str(), &str_end, 10);
+    // }
+};
+
 
 /**
  * Tagged union-like object containing a pointer storing a value to tune.
@@ -60,16 +99,29 @@ class TuneItem
 public:
     enum Type
     {
+#define X_ENUM(T) ENUMIFY(T),
         TYPE_MAP(X_ENUM)
+#undef X_ENUM
     };
 
     TuneItem() = default;
+
+#define X_CONSTRUCTOR(T) \
+    TuneItem(T& data) : type{ENUMIFY(T)}, data{reinterpret_cast<void*>(&data)} {}
+
     TYPE_MAP(X_CONSTRUCTOR)
+
+#undef X_CONSTRUCTOR
 
     void set(const String& value)
     {
         switch (type) {
+#define X_CAST(T) \
+    case ENUMIFY(T): *reinterpret_cast<T*>(data) = converter::convert<T>(value); break;
+
             TYPE_MAP(X_CAST)
+
+#undef X_CAST
         }
     }
 
@@ -77,6 +129,7 @@ private:
     Type type;
     void* data = nullptr;
 };
+
 
 #ifdef SERIAL_TUNING_USE_ETL_UNORDERED_MAP
 namespace etl
@@ -157,10 +210,6 @@ namespace detail
 
 #endif
 
-namespace detail
-{
-}
-
 
 template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS>
 class TuneSet
@@ -186,5 +235,8 @@ public:
         }
     }
 };
+
+
+#undef ENABLE_IF
 
 #endif
