@@ -1,5 +1,7 @@
 # Serial Tuning
 
+![Get some sense Robin!](docs/gesundheit.jpg)
+
 ## Features
 
 * [x] Tune variables without restarting the program, using Arduino's serial monitor (`Serial`).
