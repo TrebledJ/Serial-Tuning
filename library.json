@@ -1,0 +1,22 @@
+{
+    "name": "Serial-Tuning",
+    "version": "1.0.0",
+    "description": "Tuning library that interfaces with the default Serial port. Adjust and debug variables more efficiently without reuploading your code every minute. Works with reading/writing custom types. Compatible with boards using the Arduino framework.",
+    "keywords": "tune, tuning, pid, esp, arduino, variables, setting, monitor, serial, input, change, modify",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TrebledJ/Serial-Tuning.git"
+    },
+    "authors": [
+        {
+            "name": "TrebledJ",
+            "email": "trebledjjj@gmail.com",
+            "url": "https://trebledj.github.io",
+            "maintainer": true
+        }
+    ],
+    "license": "MIT",
+    "dependencies": {},
+    "frameworks": "arduino",
+    "platforms": "*"
+}
