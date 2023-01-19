@@ -15,6 +15,31 @@
             "maintainer": true
         }
     ],
+    "examples": [
+        {
+            "name": "PID Tuning",
+            "base": "examples/example-pid",
+            "files": [
+                "example-pid.ino"
+            ]
+        },
+        {
+            "name": "With ETlC++",
+            "base": "examples/example-etl",
+            "files": [
+                "example-etl.ino",
+                "tuning_profile.h"
+            ]
+        },
+        {
+            "name": "PlatformIO With ETlC++",
+            "base": "examples/platformio-with-etl",
+            "files": [
+                "src/main.cpp",
+                "include/tuning_profile.h"
+            ]
+        }
+    ],
     "license": "MIT",
     "dependencies": {},
     "frameworks": "arduino",
