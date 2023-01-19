@@ -309,4 +309,9 @@ private:
 #undef ENABLE_IF
 #undef ENUMIFY
 
+
+// Helper macro for adding a tuning variable with the same label as the variable name.
+#define TUNE(VAR) add(#VAR, VAR)
+
+
 #endif

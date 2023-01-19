@@ -1,6 +1,6 @@
 {
     "name": "Serial-Tuning",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Tuning library that interfaces with the default Serial port. Adjust and debug variables more efficiently without reuploading your code every minute. Works with reading/writing custom types. Compatible with boards using the Arduino framework.",
     "keywords": "tune, tuning, pid, esp, arduino, variables, setting, monitor, serial, input, change, modify",
     "repository": {
@@ -17,26 +17,17 @@
     ],
     "examples": [
         {
+            "name": "Different Types",
+            "base": "examples/example-types",
+            "files": [
+                "example-types.ino"
+            ]
+        },
+        {
             "name": "PID Tuning",
             "base": "examples/example-pid",
             "files": [
                 "example-pid.ino"
-            ]
-        },
-        {
-            "name": "With ETLCPP",
-            "base": "examples/example-etl",
-            "files": [
-                "example-etl.ino",
-                "tuning_profile.h"
-            ]
-        },
-        {
-            "name": "PlatformIO With ETLCPP",
-            "base": "examples/platformio-with-etl",
-            "files": [
-                "src/main.cpp",
-                "include/tuning_profile.h"
             ]
         }
     ],
