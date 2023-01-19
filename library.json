@@ -24,7 +24,7 @@
             ]
         },
         {
-            "name": "With ETlC++",
+            "name": "With ETLCPP",
             "base": "examples/example-etl",
             "files": [
                 "example-etl.ino",
@@ -32,7 +32,7 @@
             ]
         },
         {
-            "name": "PlatformIO With ETlC++",
+            "name": "PlatformIO With ETLCPP",
             "base": "examples/platformio-with-etl",
             "files": [
                 "src/main.cpp",
