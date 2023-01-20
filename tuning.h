@@ -302,6 +302,7 @@ private:
 
 #undef X_CASE
         }
+        return "";
     }
 };
 
