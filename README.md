@@ -9,6 +9,7 @@
 * [x] Works on boards based on the Arduino framework (e.g. ESP32).
 * [x] Print variables.
 * [x] Works with custom types.
+* [x] Report bad input and parse errors through opt-in logging.
 
 ## Example
 
@@ -59,8 +60,7 @@ Check out more examples in [*examples*](examples).
 
 ## Roadmap
 
-* [ ] Work with other UART pins, not just the default `Serial`.
-* [ ] Handle bad input and parse errors. (I guess just ignore the input then?)
+* [ ] Work with other UART ports, not just the default `Serial`.
 
 
 <!-- 
