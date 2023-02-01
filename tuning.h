@@ -3,7 +3,7 @@
 
 #if !defined(SERIAL_TUNING_NO_PROFILE_HEADER) && defined(__has_include)
 #if !__has_include("tuning_profile.h")
-#define TUNING_NO_PROFILE_HEADER
+#define SERIAL_TUNING_NO_PROFILE_HEADER
 #endif
 #endif
 
@@ -161,6 +161,44 @@ public:
 };
 
 
+namespace detail
+{
+    /**
+     * Helper class for buffering strings and handling delimiters.
+     */
+    struct StringReader
+    {
+        const String& text;
+        size_t index = 0;
+
+        StringReader(const String& text) : text{text} {}
+
+        operator bool() const
+        {
+            return available() > 0;
+        }
+
+        size_t available() const
+        {
+            return text.length() - index;
+        }
+
+        String readUntil(char delimiter)
+        {
+            size_t begin = index;
+
+            for (; index < text.length() && text[index] != delimiter; index++)
+                ;
+            return text.substring(begin, ((delimiter && text[index] == delimiter) ? index++ : index));
+        }
+
+        String rest() const
+        {
+            return text.substring(index);
+        }
+    };
+} // namespace detail
+
 #ifdef SERIAL_TUNING_USE_ETL_UNORDERED_MAP
 namespace etl
 {
@@ -243,11 +281,15 @@ namespace detail
 #endif
 
 
+using Callback = void (*)(void*);
+
+
 template <size_t MAX_ITEMS = SERIAL_TUNING_DEFAULT_MAX_ITEMS, typename Reader = DefaultReader,
           typename Writer = DefaultWriter>
 class TuneSet
 {
     detail::container<MAX_ITEMS> m_container;
+    Callback m_onSetCallback = nullptr;
 
 public:
     template <typename T>
@@ -256,24 +298,43 @@ public:
         m_container.insert(name, TuneItem(data));
     }
 
+    void add(String name, uint32_t& data, uint32_t& mask)
+    {
+        m_container.insert(name, TuneItem(data));
+    }
+
+    void onUpdate(Callback callback)
+    {
+        m_onSetCallback = callback;
+    }
+
     void readSerial()
     {
         while (Serial.available()) {
-            String name = Serial.readStringUntil('=');
-            name.trim();
-            String value = Serial.readStringUntil('\n');
-            if (!name.isEmpty()) {
-                TuneItem* item = m_container.get(name);
-                if (!item) {
+            String line = Serial.readStringUntil('\n');
+            read(line);
+        }
+    }
+
+    void read(String s)
+    {
+        detail::StringReader reader{s};
+        String name = reader.readUntil('=');
+        String value = reader.rest();
+        // Serial.printf("TuneSet: parsed '%s' --> name='%s', value='%s'\n", s.c_str(), name.c_str(), value.c_str());
+        if (!name.isEmpty()) {
+            TuneItem* item = m_container.get(name);
+            if (!item) {
 #ifdef SERIAL_TUNING_WARN_NOT_FOUND
-                    Serial.println("error: could not find variable '" + name + "'");
+                Serial.println("error: could not find variable '" + name + "'");
 #endif
+            } else {
+                if (!value.isEmpty()) {
+                    set(*item, value);
+                    if (m_onSetCallback)
+                        m_onSetCallback(item->data);
                 } else {
-                    if (!value.isEmpty()) {
-                        set(*item, value);
-                    } else {
-                        Serial.printf("%s=%s\n", name, to_string(*item));
-                    }
+                    Serial.printf("%s=%s\n", name.c_str(), to_string(*item).c_str());
                 }
             }
         }
