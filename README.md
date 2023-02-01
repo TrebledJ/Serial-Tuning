@@ -61,3 +61,19 @@ Check out more examples in [*examples*](examples).
 
 * [ ] Work with other UART pins, not just the default `Serial`.
 * [ ] Handle bad input and parse errors. (I guess just ignore the input then?)
+
+
+<!-- 
+## Dev Notes
+
+### Publish on PlatformIO
+
+* Modify library.json, update the version.
+* Run `pio pkg publish` in a PlatformIO terminal.
+
+### Publish on Arduino Package List
+
+* Modify library.properties, update the version.
+* Make a new GitHub release.
+
+-->
