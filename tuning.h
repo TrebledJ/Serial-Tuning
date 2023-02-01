@@ -296,17 +296,30 @@ class TuneSet
     Callback m_onSetCallback = nullptr;
 
 public:
+    /**
+     * @brief   Adds a tuning variable with an associated label and variable.
+     *          Anytime we want to refer this variable from Serial, you would
+     *          use its label.
+     */
     template <typename T>
     void add(String label, T& data)
     {
         m_container.insert(label, TuneItem(data));
     }
 
+    /**
+     * @brief   Registers a callback to be called when a value is set. The
+     *          callback is passed a pointer of the modified variable. See
+     *          README for examples.
+     */
     void onUpdate(Callback callback)
     {
         m_onSetCallback = callback;
     }
 
+    /**
+     * @brief   Read commands from Serial.
+     */
     void readSerial()
     {
         while (Serial.available()) {
@@ -315,6 +328,14 @@ public:
         }
     }
 
+    /**
+     * @brief   Read commands directly from a string. We assume the string
+     *          represents ONE line containing ONE command.
+     *
+     *          If the command follows "label=xyz", then the variable associated with `label` is set to `xyz`.
+     *          If the command follows "label", then the variable associated with `label` is printed to Serial.
+     *          You can customise the print format and logging options in your tuning_profile.h.
+     */
     void read(String s)
     {
         detail::StringReader reader{s};

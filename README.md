@@ -10,6 +10,9 @@
 * [x] Print variables.
 * [x] Works with custom types.
 * [x] Report bad input and parse errors through opt-in logging.
+* [x] Parse commands from `String` input (doesn't necessarily use `Serial` RX).
+* [x] Optional callback when a variable is set.
+
 
 ## Example
 
@@ -56,6 +59,94 @@ kp          # Prints back "kp=0.001000".
 ```
 
 Check out more examples in [*examples*](examples).
+
+
+### Callback Example
+
+```cpp
+// Declare some tuning variables in file scope.
+float kp;
+
+#define NUM_OPTIONS 20
+uint8_t options[NUM_OPTIONS];
+
+// Declare a TuneSet, as usual.
+TuneSet<> tuneset;
+
+// Define a callback function which takes a void* parameter.
+void tuningOnUpdate(void* ptr) {
+    if (ptr == &kp) {
+        Serial.println("kp updated");
+        // Save to SD?
+        // Notify over WiFi?
+        // Clamp within range?
+    } else if (&options[0] <= ptr && ptr <= &options[NUM_OPTIONS - 1]) {
+        Serial.println("option updated");
+        // Do stuff.
+    }
+}
+
+void setup() {
+    // Add our tuning variables, as usual.
+    tuneset.add("kp", kp);
+    for (int i = 0; i < 20; i++) {
+        tuneset.add(String("option") + i, &options[i]);
+    }
+
+    // Register the callback.
+    tuneset.onUpdate(tuningOnUpdate);
+}
+
+void loop() {
+    // Poll for commands, as usual.
+    tuneset.readSerial();
+
+    delay(10);
+}
+```
+
+
+### Custom Type Example
+
+```cpp
+// Have a custom type in the first place.
+struct Vec2 { float x, y; };
+
+
+// Inherit `DefaultReader`.
+class MyReader : public DefaultReader {
+public:
+    // Inherit default `read()` functions.
+    using DefaultReader::read;
+
+    // Overload `read()` for your custom type.
+    template <typename T, enable_if_t<std::is_same<T, Vec2>::value, int> = 0>
+    static Vec2 read(const String& value)
+    {
+        int i = value.indexOf(',');
+        if (i == -1) {
+            return Vec2{value.toFloat(), 0.0f};
+        }
+        return Vec2{value.substring(0, i).toFloat(), value.substring(i + 1).toFloat()};
+    }
+};
+
+// Declare a type alias for convenience.
+using MyTuneSet = TuneSet<SERIAL_TUNING_DEFAULT_MAX_ITEMS, MyReader, DefaultWriter>;
+
+// Use as usual.
+MyTuneSet tuneset;
+
+float kp;
+
+void setup() {
+    tuneset.add("kp", kp);
+    // ...
+}
+
+// ...
+```
+
 
 
 ## Roadmap
