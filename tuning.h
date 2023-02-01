@@ -27,6 +27,10 @@
 #define SERIAL_TUNING_DEFAULT_MAX_ITEMS 32
 #endif
 
+#ifndef SERIAL_TUNING_OUTPUT_FORMAT
+#define SERIAL_TUNING_OUTPUT_FORMAT "%s=%s\n"
+#endif
+
 
 // Use an x-macro to avoid repetition/typos.
 #ifndef SERIAL_TUNING_TYPE_LIST
@@ -321,12 +325,14 @@ public:
         detail::StringReader reader{s};
         String name = reader.readUntil('=');
         String value = reader.rest();
-        // Serial.printf("TuneSet: parsed '%s' --> name='%s', value='%s'\n", s.c_str(), name.c_str(), value.c_str());
+#ifdef SERIAL_TUNING_LOG_PARSE_RESULT
+        Serial.printf("[TuneSet] parsed '%s' --> name='%s', value='%s'\n", s.c_str(), name.c_str(), value.c_str());
+#endif
         if (!name.isEmpty()) {
             TuneItem* item = m_container.get(name);
             if (!item) {
 #ifdef SERIAL_TUNING_WARN_NOT_FOUND
-                Serial.println("error: could not find variable '" + name + "'");
+                Serial.println("[TuneSet] error: could not find variable '" + name + "'");
 #endif
             } else {
                 if (!value.isEmpty()) {
@@ -334,7 +340,7 @@ public:
                     if (m_onSetCallback)
                         m_onSetCallback(item->data);
                 } else {
-                    Serial.printf("%s=%s\n", name.c_str(), to_string(*item).c_str());
+                    Serial.printf(SERIAL_TUNING_OUTPUT_FORMAT, name.c_str(), to_string(*item).c_str());
                 }
             }
         }

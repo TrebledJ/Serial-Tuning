@@ -38,5 +38,11 @@
 // Uncomment the following line to print warnings to Serial when a variable name is not found.
 // #define SERIAL_TUNING_WARN_NOT_FOUND
 
+// Uncomment the following line to log the name/value parsed by TuneSet.
+// #define SERIAL_TUNING_LOG_PARSE_RESULT
+
+// Uncomment the following line to change the output format when "getting" variables (i.e. commands which don't set values).
+// #define SERIAL_TUNING_OUTPUT_FORMAT "%s=%s\n" 
+
 
 #endif
