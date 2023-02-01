@@ -15,6 +15,10 @@
 // Uncomment the following line to use etl unordered map for tuning.
 // #define SERIAL_TUNING_USE_ETL_UNORDERED_MAP
 
+// Uncomment the following line if you're using an Arduino controller.
+// This setting is only important if you're using ETL (see macro above).
+// #define SERIAL_TUNING_IS_ARDUINO
+
 
 // ----- Default Max Items -----
 // The maximum number of items to use by default. You may wish to set a smaller

@@ -14,7 +14,9 @@
 #include <Arduino.h>
 
 #ifdef SERIAL_TUNING_USE_ETL_UNORDERED_MAP
+#ifdef SERIAL_TUNING_IS_ARDUINO
 #include <Embedded_Template_Library.h> // Mandatory for Arduino IDE.
+#endif
 #include <etl/unordered_map.h>
 #else
 #include <array>
@@ -234,7 +236,7 @@ namespace detail
             m_items[label] = item;
         }
 
-        TuneItem& get(const String& label)
+        TuneItem* get(const String& label)
         {
             auto it = m_items.find(label);
             if (it != m_items.end())
