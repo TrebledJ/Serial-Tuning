@@ -1,6 +1,6 @@
 {
     "name": "Serial-Tuning",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Tuning library that interfaces with the default Serial port. Adjust and debug variables more efficiently without reuploading your code every minute. Works with reading/writing custom types. Compatible with boards using the Arduino framework.",
     "keywords": "tune, tuning, pid, esp, arduino, variables, setting, monitor, serial, input, change, modify",
     "repository": {
