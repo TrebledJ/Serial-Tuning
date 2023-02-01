@@ -25,12 +25,24 @@
 // ----- Tuning Types -----
 // You may define your own x-macro list of types to tune.
 // You may need to define your own parser/converter if your type is not specialised in the DefaultParser.
+// You should also include any header files which define your custom type,
+// so that Serial Tuning knows the size of your class.
 
 // #define SERIAL_TUNING_TYPE_LIST(X) \
-//     X(int32_t)       \
-//     X(uint32_t)      \
-//     X(float)         \
-//     X(String)        \
+//     X(int8_t)                      \
+//     X(int16_t)                     \
+//     X(int32_t)                     \
+//     X(int64_t)                     \
+//     X(uint8_t)                     \
+//     X(uint16_t)                    \
+//     X(uint32_t)                    \
+//     X(uint64_t)                    \
+//     X(float)                       \
+//     X(double)                      \
+//     X(String)                      \
+//     X(YourCustomType)
+
+// #include "your-custom-type-defs.h"
 
 
 // ----- Serial Output -----
@@ -41,8 +53,8 @@
 // Uncomment the following line to log the name/value parsed by TuneSet.
 // #define SERIAL_TUNING_LOG_PARSE_RESULT
 
-// Uncomment the following line to change the output format when "getting" variables (i.e. commands which don't set values).
-// #define SERIAL_TUNING_OUTPUT_FORMAT "%s=%s\n" 
+// Uncomment the following line to change the output format when "getting" variables (i.e. commands which don't set
+// values). #define SERIAL_TUNING_OUTPUT_FORMAT "%s=%s\n"
 
 
 #endif

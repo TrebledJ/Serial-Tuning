@@ -106,12 +106,45 @@ void loop() {
 ```
 
 
-### Custom Type Example
+### Custom Reader Example
+
+An example demonstrating how to construct a `Reader` for custom types. A custom `Writer` follows similarly, except you go the opposite direction: translating custom types to `String`s. Remember to also define a `SERIAL_TUNING_TYPE_LIST` in your `tuning_profile.h`!
 
 ```cpp
+// vec2.h
+
 // Have a custom type in the first place.
 struct Vec2 { float x, y; };
+```
 
+```cpp
+// tuning_profile.h
+
+// Define a `SERIAL_TUNING_TYPE_LIST` macro.
+// Add your custom type to the type list.
+// Make sure to stick to the format, and don't forget backslashes if necessary.
+#define SERIAL_TUNING_TYPE_LIST(X) \
+    X(int8_t)                      \
+    X(int16_t)                     \
+    X(int32_t)                     \
+    X(int64_t)                     \
+    X(uint8_t)                     \
+    X(uint16_t)                    \
+    X(uint32_t)                    \
+    X(uint64_t)                    \
+    X(float)                       \
+    X(double)                      \
+    X(String)                      \
+    X(Vec2)
+
+// Include the definition for Vec2, so that Serial Tuning knows how to call it in a function.
+#include "vec2.h"
+```
+
+```cpp
+// main.cpp
+
+#include "vec2.h"
 
 // Inherit `DefaultReader`.
 class MyReader : public DefaultReader {
@@ -123,8 +156,10 @@ public:
     template <typename T, enable_if_t<std::is_same<T, Vec2>::value, int> = 0>
     static Vec2 read(const String& value)
     {
+        // Parse 2 floats from the string.
         int i = value.indexOf(',');
         if (i == -1) {
+            // Couldn't find the delimiter, so assume second float is 0.
             return Vec2{value.toFloat(), 0.0f};
         }
         return Vec2{value.substring(0, i).toFloat(), value.substring(i + 1).toFloat()};
@@ -138,13 +173,12 @@ using MyTuneSet = TuneSet<SERIAL_TUNING_DEFAULT_MAX_ITEMS, MyReader, DefaultWrit
 MyTuneSet tuneset;
 
 float kp;
+Vec2 v;
 
 void setup() {
     tuneset.add("kp", kp);
-    // ...
+    tuneset.add("v", v);
 }
-
-// ...
 ```
 
 
