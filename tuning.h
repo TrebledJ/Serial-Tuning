@@ -227,16 +227,16 @@ namespace detail
     class container
     {
     public:
-        void insert(const String& name, const TuneItem& item)
+        void insert(const String& label, const TuneItem& item)
         {
             if (m_items.size() == MAX_ITEMS)
                 return;
-            m_items[name] = item;
+            m_items[label] = item;
         }
 
-        TuneItem& get(const String& name)
+        TuneItem& get(const String& label)
         {
-            auto it = m_items.find(name);
+            auto it = m_items.find(label);
             if (it != m_items.end())
                 return &it->second;
 
@@ -256,19 +256,19 @@ namespace detail
     class container
     {
     public:
-        void insert(const String& name, const TuneItem& item)
+        void insert(const String& label, const TuneItem& item)
         {
             if (m_size == MAX_ITEMS)
                 return;
-            m_names[m_size] = name;
+            m_labels[m_size] = label;
             m_items[m_size] = item;
             m_size++;
         }
 
-        TuneItem* get(const String& name)
+        TuneItem* get(const String& label)
         {
             for (size_t i = 0; i < m_size; i++) {
-                if (m_names[i] == name) {
+                if (m_labels[i] == label) {
                     return &m_items[i];
                 }
             }
@@ -276,7 +276,7 @@ namespace detail
         }
 
     private:
-        String m_names[MAX_ITEMS];
+        String m_labels[MAX_ITEMS];
         TuneItem m_items[MAX_ITEMS];
         size_t m_size;
     };
@@ -297,14 +297,9 @@ class TuneSet
 
 public:
     template <typename T>
-    void add(String name, T& data)
+    void add(String label, T& data)
     {
-        m_container.insert(name, TuneItem(data));
-    }
-
-    void add(String name, uint32_t& data, uint32_t& mask)
-    {
-        m_container.insert(name, TuneItem(data));
+        m_container.insert(label, TuneItem(data));
     }
 
     void onUpdate(Callback callback)
@@ -323,16 +318,16 @@ public:
     void read(String s)
     {
         detail::StringReader reader{s};
-        String name = reader.readUntil('=');
+        String label = reader.readUntil('=');
         String value = reader.rest();
 #ifdef SERIAL_TUNING_LOG_PARSE_RESULT
-        Serial.printf("[TuneSet] parsed '%s' --> name='%s', value='%s'\n", s.c_str(), name.c_str(), value.c_str());
+        Serial.printf("[TuneSet] parsed '%s' --> label='%s', value='%s'\n", s.c_str(), label.c_str(), value.c_str());
 #endif
-        if (!name.isEmpty()) {
-            TuneItem* item = m_container.get(name);
+        if (!label.isEmpty()) {
+            TuneItem* item = m_container.get(label);
             if (!item) {
 #ifdef SERIAL_TUNING_WARN_NOT_FOUND
-                Serial.println("[TuneSet] error: could not find variable '" + name + "'");
+                Serial.println("[TuneSet] error: could not find variable '" + label + "'");
 #endif
             } else {
                 if (!value.isEmpty()) {
@@ -340,7 +335,7 @@ public:
                     if (m_onSetCallback)
                         m_onSetCallback(item->data);
                 } else {
-                    Serial.printf(SERIAL_TUNING_OUTPUT_FORMAT, name.c_str(), to_string(*item).c_str());
+                    Serial.printf(SERIAL_TUNING_OUTPUT_FORMAT, label.c_str(), to_string(*item).c_str());
                 }
             }
         }
